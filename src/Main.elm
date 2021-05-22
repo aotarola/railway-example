@@ -1,7 +1,7 @@
 module Main exposing (main)
 
 import Browser
-import Html exposing (Html, button, div, input, text)
+import Html exposing (Html, button, div, input, label, text)
 import Html.Events exposing (onInput)
 
 
@@ -19,7 +19,8 @@ type alias User =
 
 
 type Msg
-    = UserClickedValidateNameButton String
+    = UserEnteredNameInput String
+    | UserEnteredAgeInput String
 
 
 init : User
@@ -30,14 +31,24 @@ init =
 update : Msg -> User -> User
 update msg model =
     case msg of
-        UserClickedValidateNameButton _ ->
+        UserEnteredNameInput _ ->
+            model
+
+        UserEnteredAgeInput _ ->
             model
 
 
 view : User -> Html Msg
 view model =
     div []
-        [ input [ onInput UserClickedValidateNameButton ] []
+        [ div []
+            [ label [] [ text "Name" ]
+            , input [ onInput UserEnteredNameInput ] []
+            ]
+        , div []
+            [ label [] [ text "Age" ]
+            , input [ onInput UserEnteredAgeInput ] []
+            ]
         , button [] [ text "Validate" ]
         , div [] [ text "Click to validate" ]
         , div [] [ text <| getValidationInfo model.isValid ]
