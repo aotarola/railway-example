@@ -8,31 +8,43 @@ import Html.Events exposing (onClick, onInput)
 
 {-
    TODO:
-       - Better Modeling for User and Validation
-       - Validate: name and last name, age, and email
-       - Collect all error messages (do not short-circuit on first error)
+       - [x] Better Modeling for User and Validation
+       - [ ] Validate: name and last name, age, and email
+       - [ ] Collect all error messages (do not short-circuit on first error)
+          - Idea: Use a dict to collect the errors
 -}
 
 
 type Validation
     = NotChecked
-    | GotErrors (List String)
-    | Succeded
+    | Validated (Result String User)
+
+
+type alias User =
+    { name : String
+    , age : Int
+    , email : String
+    }
 
 
 type alias Model =
-    { name : String, age : String, validation : Validation }
+    { name : String
+    , age : String
+    , email : String
+    , validation : Validation
+    }
 
 
 type Msg
     = EnteredNameInput String
     | EnteredAgeInput String
+    | EnteredEmailInput String
     | ClickedValidationButton
 
 
 init : Model
 init =
-    Model "" "" NotChecked
+    Model "" "" "" NotChecked
 
 
 update : Msg -> Model -> Model
@@ -44,23 +56,44 @@ update msg model =
         EnteredAgeInput age ->
             { model | age = age }
 
+        EnteredEmailInput age ->
+            { model | age = age }
+
         ClickedValidationButton ->
             validate model
 
 
-validateName : a -> Validation
-validateName _ =
-    Succeded
+validateName : User -> Result String User
+validateName user =
+    Ok user
 
 
-validateAge : a -> Validation
-validateAge _ =
-    Succeded
+validateAge : User -> Result String User
+validateAge user =
+    Ok user
+
+
+validateEmail : User -> Result String User
+validateEmail user =
+    Ok user
+
+
+parseUser : Model -> Result String User
+parseUser model =
+    Ok (User "" 3 "")
 
 
 validate : Model -> Model
 validate model =
-    { model | validation = Succeded }
+    let
+        validation =
+            parseUser model
+                |> Result.andThen validateName
+                |> Result.andThen validateAge
+                |> Result.andThen validateEmail
+                |> Validated
+    in
+    { model | validation = validation }
 
 
 view : Model -> Html Msg
@@ -73,6 +106,10 @@ view { validation } =
         , div []
             [ label [] [ text "Age" ]
             , input [ onInput EnteredAgeInput ] []
+            ]
+        , div []
+            [ label [] [ text "Email" ]
+            , input [ onInput EnteredEmailInput ] []
             ]
         , viewButton
         , viewValidationInfo validation
@@ -87,14 +124,14 @@ viewButton =
 viewValidationInfo : Validation -> Html msg
 viewValidationInfo validation =
     case validation of
-        NotChecked ->
-            div [] [ text "Please click to validate" ]
-
-        Succeded ->
+        Validated (Ok _) ->
             div [] [ text "Awesome!, all is good" ]
 
-        GotErrors _ ->
+        Validated (Err _) ->
             div [] [ text "Got some errors :(" ]
+
+        NotChecked ->
+            div [] [ text "Please click to validate" ]
 
 
 main : Program () Model Msg
