@@ -2,7 +2,7 @@ module Main exposing (main)
 
 import Browser
 import Html exposing (Html, button, div, input, label, text)
-import Html.Events exposing (onInput)
+import Html.Events exposing (onClick, onInput)
 
 
 
@@ -14,56 +14,89 @@ import Html.Events exposing (onInput)
 -}
 
 
-type alias User =
-    { name : String, age : Int, isValid : Bool }
+type Validation
+    = NotChecked
+    | GotErrors (List String)
+    | Succeded
+
+
+type alias Model =
+    { name : String, age : String, validation : Validation }
 
 
 type Msg
-    = UserEnteredNameInput String
-    | UserEnteredAgeInput String
+    = EnteredNameInput String
+    | EnteredAgeInput String
+    | ClickedValidationButton
 
 
-init : User
+init : Model
 init =
-    User "Alice" 18 False
+    Model "" "" NotChecked
 
 
-update : Msg -> User -> User
+update : Msg -> Model -> Model
 update msg model =
     case msg of
-        UserEnteredNameInput _ ->
-            model
+        EnteredNameInput name ->
+            { model | name = name }
 
-        UserEnteredAgeInput _ ->
-            model
+        EnteredAgeInput age ->
+            { model | age = age }
+
+        ClickedValidationButton ->
+            validate model
 
 
-view : User -> Html Msg
-view model =
+validateName : a -> Validation
+validateName _ =
+    Succeded
+
+
+validateAge : a -> Validation
+validateAge _ =
+    Succeded
+
+
+validate : Model -> Model
+validate model =
+    { model | validation = Succeded }
+
+
+view : Model -> Html Msg
+view { validation } =
     div []
         [ div []
             [ label [] [ text "Name" ]
-            , input [ onInput UserEnteredNameInput ] []
+            , input [ onInput EnteredNameInput ] []
             ]
         , div []
             [ label [] [ text "Age" ]
-            , input [ onInput UserEnteredAgeInput ] []
+            , input [ onInput EnteredAgeInput ] []
             ]
-        , button [] [ text "Validate" ]
-        , div [] [ text "Click to validate" ]
-        , div [] [ text <| getValidationInfo model.isValid ]
+        , viewButton
+        , viewValidationInfo validation
         ]
 
 
-getValidationInfo : Bool -> String
-getValidationInfo isValid =
-    if isValid then
-        "great, is valid"
-
-    else
-        "not so great, invalid"
+viewButton : Html Msg
+viewButton =
+    div [] [ button [ onClick ClickedValidationButton ] [ text "Validate" ] ]
 
 
-main : Program () User Msg
+viewValidationInfo : Validation -> Html msg
+viewValidationInfo validation =
+    case validation of
+        NotChecked ->
+            div [] [ text "Please click to validate" ]
+
+        Succeded ->
+            div [] [ text "Awesome!, all is good" ]
+
+        GotErrors _ ->
+            div [] [ text "Got some errors :(" ]
+
+
+main : Program () Model Msg
 main =
     Browser.sandbox { init = init, view = view, update = update }
