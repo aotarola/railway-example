@@ -21,10 +21,6 @@ type ValidationError
     | InvalidEmail String
 
 
-type Validation
-    = Validation (Result ValidationError User)
-
-
 type alias User =
     { name : String
     , age : Int
@@ -103,13 +99,20 @@ parseUser { name, age, email } =
         |> Ok
 
 
-validate : Model -> Validation
+uppercaseName : User -> User
+uppercaseName model =
+    { model | name = String.toUpper model.name }
+
+
+validate : Model -> Result ValidationError User
 validate model =
     parseUser model
         |> Result.andThen validateName
+        -- two-track function
         |> Result.andThen validateAge
         |> Result.andThen validateEmail
-        |> Validation
+        -- One track function converted to two-track
+        |> Result.map uppercaseName
 
 
 view : Model -> Html Msg
@@ -134,16 +137,16 @@ view model =
 viewValidationInfo : Model -> Html msg
 viewValidationInfo model =
     case validate model of
-        Validation (Ok _) ->
+        Ok _ ->
             div [] [ text "Awesome!, all is good" ]
 
-        Validation (Err EmptyName) ->
+        Err EmptyName ->
             div [] [ text "Please provide a name" ]
 
-        Validation (Err InvalidAge) ->
+        Err InvalidAge ->
             div [] [ text "You are not old enough :(" ]
 
-        Validation (Err (InvalidEmail email)) ->
+        Err (InvalidEmail email) ->
             div [] [ text <| "The provided email is not valid: " ++ email ]
 
 
