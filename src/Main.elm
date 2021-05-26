@@ -1,8 +1,8 @@
 module Main exposing (main)
 
 import Browser
-import Html exposing (Html, button, div, input, label, text)
-import Html.Events exposing (onClick, onInput)
+import Html exposing (Html, div, input, label, text)
+import Html.Events exposing (onInput)
 
 
 
@@ -133,11 +133,7 @@ view model =
 
 viewValidationInfo : Model -> Html msg
 viewValidationInfo model =
-    let
-        validated =
-            validate model
-    in
-    case validated of
+    case validate model of
         Validation (Ok _) ->
             div [] [ text "Awesome!, all is good" ]
 
