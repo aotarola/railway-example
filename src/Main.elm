@@ -9,15 +9,20 @@ import Html.Events exposing (onClick, onInput)
 {-
    TODO:
        - [x] Better Modeling for User and Validation
-       - [ ] Validate: name and last name, age, and email
+       - [x] Validate: name and last name, age, and email
        - [ ] Collect all error messages (do not short-circuit on first error)
-          - Idea: Use a dict to collect the errors
+          - Idea: Use a dict to collect the errors?
 -}
 
 
+type ValidationError
+    = EmptyName
+    | InvalidAge
+    | InvalidEmail String
+
+
 type Validation
-    = NotChecked
-    | Validated (Result String User)
+    = Validation (Result ValidationError User)
 
 
 type alias User =
@@ -31,7 +36,6 @@ type alias Model =
     { name : String
     , age : String
     , email : String
-    , validation : Validation
     }
 
 
@@ -39,12 +43,11 @@ type Msg
     = EnteredNameInput String
     | EnteredAgeInput String
     | EnteredEmailInput String
-    | ClickedValidationButton
 
 
 init : Model
 init =
-    Model "" "" "" NotChecked
+    Model "" "" ""
 
 
 update : Msg -> Model -> Model
@@ -56,48 +59,61 @@ update msg model =
         EnteredAgeInput age ->
             { model | age = age }
 
-        EnteredEmailInput age ->
-            { model | age = age }
-
-        ClickedValidationButton ->
-            validate model
+        EnteredEmailInput email ->
+            { model | email = email }
 
 
-validateName : User -> Result String User
+validateName : User -> Result ValidationError User
 validateName user =
-    Ok user
+    case user.name of
+        "" ->
+            Err EmptyName
+
+        _ ->
+            Ok user
 
 
-validateAge : User -> Result String User
+validateAge : User -> Result ValidationError User
 validateAge user =
-    Ok user
+    if user.age < 21 then
+        Err InvalidAge
+
+    else
+        Ok user
 
 
-validateEmail : User -> Result String User
+validateEmail : User -> Result ValidationError User
 validateEmail user =
-    Ok user
+    if String.contains "@" user.email then
+        Ok user
+
+    else
+        Err <| InvalidEmail user.email
 
 
-parseUser : Model -> Result String User
-parseUser model =
-    Ok (User "" 3 "")
-
-
-validate : Model -> Model
-validate model =
+parseUser : Model -> Result ValidationError User
+parseUser { name, age, email } =
     let
-        validation =
-            parseUser model
-                |> Result.andThen validateName
-                |> Result.andThen validateAge
-                |> Result.andThen validateEmail
-                |> Validated
+        intAge =
+            age
+                |> String.toInt
+                |> Maybe.withDefault 0
     in
-    { model | validation = validation }
+    User name intAge email
+        |> Ok
+
+
+validate : Model -> Validation
+validate model =
+    parseUser model
+        |> Result.andThen validateName
+        |> Result.andThen validateAge
+        |> Result.andThen validateEmail
+        |> Validation
 
 
 view : Model -> Html Msg
-view { validation } =
+view model =
     div []
         [ div []
             [ label [] [ text "Name" ]
@@ -111,27 +127,28 @@ view { validation } =
             [ label [] [ text "Email" ]
             , input [ onInput EnteredEmailInput ] []
             ]
-        , viewButton
-        , viewValidationInfo validation
+        , viewValidationInfo model
         ]
 
 
-viewButton : Html Msg
-viewButton =
-    div [] [ button [ onClick ClickedValidationButton ] [ text "Validate" ] ]
-
-
-viewValidationInfo : Validation -> Html msg
-viewValidationInfo validation =
-    case validation of
-        Validated (Ok _) ->
+viewValidationInfo : Model -> Html msg
+viewValidationInfo model =
+    let
+        validated =
+            validate model
+    in
+    case validated of
+        Validation (Ok _) ->
             div [] [ text "Awesome!, all is good" ]
 
-        Validated (Err _) ->
-            div [] [ text "Got some errors :(" ]
+        Validation (Err EmptyName) ->
+            div [] [ text "Please provide a name" ]
 
-        NotChecked ->
-            div [] [ text "Please click to validate" ]
+        Validation (Err InvalidAge) ->
+            div [] [ text "You are not old enough :(" ]
+
+        Validation (Err (InvalidEmail email)) ->
+            div [] [ text <| "The provided email is not valid: " ++ email ]
 
 
 main : Program () Model Msg
